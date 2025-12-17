@@ -21,35 +21,33 @@ MAX_HISTORY = 100  # 保存するログの最大数
 chat_history = [] 
 
 def is_raining_now():
-    """
-    天気を取得し、雨判定(True/False)と天気詳細テキストを返す
-    """
-    # APIキーがない場合の安全策
+    # 1. まずAPIキーが届いているか確認
     if not API_KEY:
-        print("⚠ APIキーが設定されていません")
-        return False, "APIキー未設定"
+        return False, "⚠️ 環境変数 OWM_API_KEY が読み込めていません！"
 
     url = f"https://api.openweathermap.org/data/2.5/weather?q={CITY_NAME}&appid={API_KEY}&lang=ja&units=metric"
     
     try:
         response = requests.get(url)
-        data = response.json()
         
-        # OpenWeatherMapの仕様: weather[0].main が天気の概要
+        # 2. ステータスコードが200（成功）以外ならエラーを表示
+        if response.status_code != 200:
+            return False, f"API通信エラー: {response.status_code} / {response.text}"
+
+        data = response.json()
         weather_main = data["weather"][0]["main"]
         description = data["weather"][0]["description"]
         
-        # 雨と判定する天気の種類
         rain_conditions = ["Rain", "Drizzle", "Thunderstorm"]
-        
-        # ★デバッグ用: 晴れでもテストしたい時はここを True に書き換える
         is_rain = weather_main in rain_conditions
         
         return is_rain, description
 
     except Exception as e:
-        print(f"天気取得エラー: {e}")
-        return False, "取得エラー"
+        # 3. Python内部エラーを表示（ここが重要）
+        # APIキーの一部を表示して、正しいキーか確認する（セキュリティ注意：あとで消す）
+        key_preview = API_KEY[:4] + "***" if API_KEY else "None"
+        return False, f"システムエラー: {e} (Key: {key_preview})"
 
 @app.route('/')
 def index():
