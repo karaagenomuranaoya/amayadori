@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>雨宿り -Amayadori-</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        /* 全体の雰囲気作り */
+        body {
+            background-color: #708090;
+            /* 雨雲のようなブルーグレー */
+            color: #fff;
+            font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+            /* 明朝体でしっとりと */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        /* チャットエリアのデザイン */
+        #chat-container {
+            width: 90%;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            /* 半透明 */
+            backdrop-filter: blur(5px);
+            /* すりガラス効果 */
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        #chat-box {
+            height: 300px;
+            overflow-y: scroll;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            margin-bottom: 15px;
+            padding: 10px;
+        }
+
+        /* メッセージの見た目 */
+        .msg {
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .umbrella {
+            font-size: 1.2rem;
+            margin-right: 5px;
+        }
+
+        /* 入力欄 */
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        button {
+            width: 20%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4682B4;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #5F9EA0;
+        }
+
+        /* 晴れの日（閉店）のデザイン */
+        .closed-message {
+            text-align: center;
+        }
+
+        .sun-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Flaskから受け取った is_open が True の時だけここを表示 -->
+    {% if is_open %}
+
+    <div id="chat-container">
+        <h2 style="margin-top:0; font-weight:normal;">☔ 雨宿り <small style="font-size:0.6em;">{{ weather_desc }}</small>
+        </h2>
+        <div id="chat-box">
+            <div style="color:#ddd; font-size:0.8em; text-align:center;">
+                雨が降り始めました。チャットルームを開放します。<br>
+                雨が止むまでの間、ごゆっくりどうぞ。
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between;">
+            <input type="text" id="message-input" placeholder="雨音に紛れてつぶやく..." autocomplete="off">
+            <button onclick="sendMessage()">送信</button>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        var socket = io();
+        const colors = ['🔴', '🔵', '🟡', '🟢', '🟣', '⚪', '🌂', '☂️'];
+        const myColor = colors[Math.floor(Math.random() * colors.length)];
+
+        function sendMessage() {
+            var input = document.getElementById('message-input');
+            var text = input.value;
+            if (text) {
+                socket.emit('send_message', { message: text, color: myColor });
+                input.value = '';
+            }
+        }
+
+        socket.on('receive_message', function (data) {
+            var chatBox = document.getElementById('chat-box');
+            var newMsg = `<div class="msg"><span class="umbrella">${data.color}</span> ${data.message}</div>`;
+            chatBox.innerHTML += newMsg;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        document.getElementById("message-input").addEventListener("keypress", function (event) {
+            if (event.key === "Enter") sendMessage();
+        });
+    </script>
+
+    {% else %}
+
+    <!-- 晴れの時（False）はここを表示 -->
+    <div class="closed-message">
+        <span class="sun-icon">☀</span>
+        <h1>ただいま快晴。</h1>
+        <p>雨宿りの必要はありません。</p>
+        <p style="font-size:0.8em; color:#ccc;">現在の東京：{{ weather_desc }}</p>
+    </div>
+
+    {% endif %}
+
+</body>
+
+</html>
