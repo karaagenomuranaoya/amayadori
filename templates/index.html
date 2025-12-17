@@ -3,108 +3,197 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>雨宿り -Amayadori-</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        /* 全体の雰囲気作り */
+        /* --- 基本設定 --- */
         body {
             background-color: #708090;
-            /* 雨雲のようなブルーグレー */
+            /* 雨雲SlateGray */
             color: #fff;
             font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
-            /* 明朝体でしっとりと */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
             margin: 0;
+            overflow: hidden;
+            /* スクロール防止 */
         }
 
-        /* チャットエリアのデザイン */
+        /* --- 雨のアニメーション背景 --- */
+        .rain-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://i.imgur.com/VuT5t8M.png');
+            /* 半透明のノイズ画像などを想定 */
+            opacity: 0.1;
+            z-index: -1;
+            animation: rain-fall 0.5s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes rain-fall {
+            from {
+                background-position: 0 0;
+            }
+
+            to {
+                background-position: -20px 40px;
+            }
+        }
+
+        /* --- メインコンテナ --- */
         #chat-container {
             width: 90%;
             max-width: 600px;
-            background: rgba(255, 255, 255, 0.1);
-            /* 半透明 */
-            backdrop-filter: blur(5px);
-            /* すりガラス効果 */
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            background: rgba(25, 25, 35, 0.4);
+            /* 暗めの半透明 */
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        #chat-box {
-            height: 300px;
-            overflow-y: scroll;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        h2 {
+            margin-top: 0;
+            text-align: center;
+            font-weight: normal;
+            letter-spacing: 0.2em;
+        }
+
+        .status-text {
+            font-size: 0.8rem;
+            color: #ccc;
+            text-align: right;
             margin-bottom: 15px;
-            padding: 10px;
         }
 
-        /* メッセージの見た目 */
+        /* --- チャットエリア --- */
+        #chat-box {
+            height: 350px;
+            overflow-y: scroll;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+            padding: 10px;
+            scrollbar-width: thin;
+            /* Firefox用 */
+        }
+
+        /* スクロールバーのカスタマイズ */
+        #chat-box::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #chat-box::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
         .msg {
-            margin-bottom: 8px;
-            font-size: 1.1rem;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            animation: fade-in 0.5s ease;
+        }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .umbrella {
-            font-size: 1.2rem;
-            margin-right: 5px;
+            font-size: 1.3rem;
+            margin-right: 8px;
+            filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
         }
 
-        /* 入力欄 */
+        /* --- 入力エリア --- */
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+
         input[type="text"] {
-            width: 70%;
-            padding: 10px;
+            flex-grow: 1;
+            padding: 12px;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
             outline: none;
+            transition: background 0.3s;
+        }
+
+        input[type="text"]:focus {
+            background: rgba(255, 255, 255, 0.2);
         }
 
         button {
-            width: 20%;
-            padding: 10px;
+            padding: 0 20px;
             border: none;
-            border-radius: 5px;
-            background-color: #4682B4;
+            border-radius: 6px;
+            background-color: #5d6d7e;
             color: white;
             cursor: pointer;
+            transition: 0.3s;
         }
 
         button:hover {
-            background-color: #5F9EA0;
+            background-color: #7b8a99;
         }
 
-        /* 晴れの日（閉店）のデザイン */
-        .closed-message {
+        /* --- 晴れ（閉店）画面 --- */
+        .closed-container {
             text-align: center;
         }
 
         .sun-icon {
-            font-size: 3rem;
-            margin-bottom: 20px;
+            font-size: 4rem;
             display: block;
+            margin-bottom: 20px;
+            color: #f1c40f;
+        }
+
+        .closed-text {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 
 <body>
 
-    <!-- Flaskから受け取った is_open が True の時だけここを表示 -->
+    <!-- Flask変数 is_open で分岐 -->
     {% if is_open %}
 
+    <div class="rain-bg"></div> <!-- 雨のエフェクト -->
+
     <div id="chat-container">
-        <h2 style="margin-top:0; font-weight:normal;">☔ 雨宿り <small style="font-size:0.6em;">{{ weather_desc }}</small>
-        </h2>
+        <h2>雨宿り</h2>
+        <div class="status-text">現在の天気：{{ weather_desc }}</div>
+
         <div id="chat-box">
-            <div style="color:#ddd; font-size:0.8em; text-align:center;">
-                雨が降り始めました。チャットルームを開放します。<br>
-                雨が止むまでの間、ごゆっくりどうぞ。
+            <div style="color:#888; text-align:center; font-size:0.8em; margin-top:20px;">
+                雨音が響いています。<br>
+                誰かが来るまで、のんびりお待ちください。
             </div>
         </div>
 
-        <div style="display:flex; justify-content:space-between;">
+        <div class="input-area">
             <input type="text" id="message-input" placeholder="雨音に紛れてつぶやく..." autocomplete="off">
             <button onclick="sendMessage()">送信</button>
         </div>
@@ -112,25 +201,62 @@
 
     <script type="text/javascript">
         var socket = io();
-        const colors = ['🔴', '🔵', '🟡', '🟢', '🟣', '⚪', '🌂', '☂️'];
+
+        // 自分の傘色を決める
+        const colors = ['🔴', '🔵', '🟡', '🟢', '🟣', '⚪', '🌂', '☂️', '🌧️'];
         const myColor = colors[Math.floor(Math.random() * colors.length)];
 
+        // --- 送信処理 ---
         function sendMessage() {
             var input = document.getElementById('message-input');
-            var text = input.value;
+            var text = input.value.trim(); // 空白削除
             if (text) {
                 socket.emit('send_message', { message: text, color: myColor });
                 input.value = '';
             }
         }
 
+        // --- メッセージ作成ヘルパー ---
+        function createMessageHTML(data) {
+            return `<div class="msg"><span class="umbrella">${data.color}</span> ${escapeHtml(data.message)}</div>`;
+        }
+
+        // XSS対策（念のため）
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // --- 履歴読み込み (接続時) ---
+        socket.on('load_history', function (history) {
+            var chatBox = document.getElementById('chat-box');
+            // 案内メッセージを残したい場合は工夫が必要ですが、今回はシンプルに上書き
+            if (history.length > 0) {
+                chatBox.innerHTML = '';
+                history.forEach(function (data) {
+                    chatBox.innerHTML += createMessageHTML(data);
+                });
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        });
+
+        // --- 新着メッセージ受信 ---
         socket.on('receive_message', function (data) {
             var chatBox = document.getElementById('chat-box');
-            var newMsg = `<div class="msg"><span class="umbrella">${data.color}</span> ${data.message}</div>`;
-            chatBox.innerHTML += newMsg;
+            // 最初の案内文があれば消す（簡易的な判定）
+            if (chatBox.innerText.includes("のんびりお待ちください")) {
+                chatBox.innerHTML = '';
+            }
+
+            chatBox.innerHTML += createMessageHTML(data);
             chatBox.scrollTop = chatBox.scrollHeight;
         });
 
+        // Enterキー送信
         document.getElementById("message-input").addEventListener("keypress", function (event) {
             if (event.key === "Enter") sendMessage();
         });
@@ -138,12 +264,14 @@
 
     {% else %}
 
-    <!-- 晴れの時（False）はここを表示 -->
-    <div class="closed-message">
+    <!-- 晴れの時 -->
+    <div class="closed-container">
         <span class="sun-icon">☀</span>
-        <h1>ただいま快晴。</h1>
-        <p>雨宿りの必要はありません。</p>
-        <p style="font-size:0.8em; color:#ccc;">現在の東京：{{ weather_desc }}</p>
+        <div class="closed-text">ただいま、空は晴れています。</div>
+        <p>雨宿りチャットは閉鎖中です。</p>
+        <p style="font-size:0.9em; color:#ddd; margin-top:20px;">
+            現在の東京：{{ weather_desc }}
+        </p>
     </div>
 
     {% endif %}
