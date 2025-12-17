@@ -20,21 +20,21 @@
             height: 100vh;
             margin: 0;
             overflow: hidden;
-            /* スクロール防止 */
         }
 
-        /* --- 雨のアニメーション背景 --- */
+        /* --- 雨のアニメーション --- */
         .rain-bg {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: url('https://i.imgur.com/VuT5t8M.png');
-            /* 半透明のノイズ画像などを想定 */
-            opacity: 0.1;
+            /* ノイズ画像をCSSグラデーションで代用 */
+            background-image: repeating-linear-gradient(170deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 2px);
+            opacity: 0.8;
             z-index: -1;
-            animation: rain-fall 0.5s linear infinite;
+            background-size: 100% 200%;
+            animation: rain-fall 0.8s linear infinite;
             pointer-events: none;
         }
 
@@ -44,16 +44,15 @@
             }
 
             to {
-                background-position: -20px 40px;
+                background-position: -20px 200px;
             }
         }
 
-        /* --- メインコンテナ --- */
+        /* --- メイン枠 --- */
         #chat-container {
             width: 90%;
             max-width: 600px;
             background: rgba(25, 25, 35, 0.4);
-            /* 暗めの半透明 */
             backdrop-filter: blur(8px);
             border-radius: 12px;
             padding: 25px;
@@ -75,7 +74,7 @@
             margin-bottom: 15px;
         }
 
-        /* --- チャットエリア --- */
+        /* --- チャットログ --- */
         #chat-box {
             height: 350px;
             overflow-y: scroll;
@@ -84,10 +83,9 @@
             margin-bottom: 20px;
             padding: 10px;
             scrollbar-width: thin;
-            /* Firefox用 */
         }
 
-        /* スクロールバーのカスタマイズ */
+        /* スクロールバー装飾 */
         #chat-box::-webkit-scrollbar {
             width: 6px;
         }
@@ -121,7 +119,7 @@
             filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
         }
 
-        /* --- 入力エリア --- */
+        /* --- 入力欄 --- */
         .input-area {
             display: flex;
             gap: 10px;
@@ -156,7 +154,7 @@
             background-color: #7b8a99;
         }
 
-        /* --- 晴れ（閉店）画面 --- */
+        /* --- 閉店画面 --- */
         .closed-container {
             text-align: center;
         }
@@ -177,10 +175,10 @@
 
 <body>
 
-    <!-- Flask変数 is_open で分岐 -->
+    <!-- 天気判定で分岐 -->
     {% if is_open %}
 
-    <div class="rain-bg"></div> <!-- 雨のエフェクト -->
+    <div class="rain-bg"></div> <!-- 雨エフェクト -->
 
     <div id="chat-container">
         <h2>雨宿り</h2>
@@ -202,39 +200,30 @@
     <script type="text/javascript">
         var socket = io();
 
-        // 自分の傘色を決める
+        // 傘の色をランダム決定
         const colors = ['🔴', '🔵', '🟡', '🟢', '🟣', '⚪', '🌂', '☂️', '🌧️'];
         const myColor = colors[Math.floor(Math.random() * colors.length)];
 
-        // --- 送信処理 ---
         function sendMessage() {
             var input = document.getElementById('message-input');
-            var text = input.value.trim(); // 空白削除
+            var text = input.value.trim();
             if (text) {
                 socket.emit('send_message', { message: text, color: myColor });
                 input.value = '';
             }
         }
 
-        // --- メッセージ作成ヘルパー ---
+        // HTML安全化
         function createMessageHTML(data) {
-            return `<div class="msg"><span class="umbrella">${data.color}</span> ${escapeHtml(data.message)}</div>`;
+            // 簡易エスケープ
+            var text = document.createElement('div');
+            text.innerText = data.message;
+            return `<div class="msg"><span class="umbrella">${data.color}</span> ${text.innerHTML}</div>`;
         }
 
-        // XSS対策（念のため）
-        function escapeHtml(text) {
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-
-        // --- 履歴読み込み (接続時) ---
+        // 履歴読み込み
         socket.on('load_history', function (history) {
             var chatBox = document.getElementById('chat-box');
-            // 案内メッセージを残したい場合は工夫が必要ですが、今回はシンプルに上書き
             if (history.length > 0) {
                 chatBox.innerHTML = '';
                 history.forEach(function (data) {
@@ -244,19 +233,17 @@
             }
         });
 
-        // --- 新着メッセージ受信 ---
+        // メッセージ受信
         socket.on('receive_message', function (data) {
             var chatBox = document.getElementById('chat-box');
-            // 最初の案内文があれば消す（簡易的な判定）
             if (chatBox.innerText.includes("のんびりお待ちください")) {
                 chatBox.innerHTML = '';
             }
-
             chatBox.innerHTML += createMessageHTML(data);
             chatBox.scrollTop = chatBox.scrollHeight;
         });
 
-        // Enterキー送信
+        // Enter送信
         document.getElementById("message-input").addEventListener("keypress", function (event) {
             if (event.key === "Enter") sendMessage();
         });
